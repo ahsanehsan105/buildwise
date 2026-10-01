@@ -1,0 +1,124 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+}
+
+:root {
+  color-scheme: light;
+  --background: oklch(0.965 0.008 145);
+  --foreground: oklch(0.22 0.03 160);
+  --card: oklch(0.985 0.006 145);
+  --card-foreground: oklch(0.22 0.03 160);
+  --popover: oklch(0.985 0.006 145);
+  --popover-foreground: oklch(0.22 0.03 160);
+  --primary: oklch(0.31 0.075 165);
+  --primary-foreground: oklch(0.98 0.01 145);
+  --secondary: oklch(0.93 0.025 145);
+  --secondary-foreground: oklch(0.3 0.055 165);
+  --muted: oklch(0.93 0.015 145);
+  --muted-foreground: oklch(0.53 0.025 155);
+  --accent: oklch(0.9 0.11 104);
+  --accent-foreground: oklch(0.26 0.05 155);
+  --border: oklch(0.88 0.02 145);
+  --input: oklch(0.88 0.02 145);
+  --ring: oklch(0.56 0.08 165);
+  --radius: 0.75rem;
+}
+
+* { @apply border-border outline-ring/50; }
+html { background: var(--background); }
+body { @apply bg-background text-foreground antialiased; }
+button, select, input { font: inherit; }
+button { cursor: pointer; }
+
+.buildwise-modal input,
+.buildwise-modal select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #dfe4df;
+  border-radius: 0.75rem;
+  background: #f7f9f6;
+  padding: 0.65rem 0.8rem;
+  color: #263d33;
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+.buildwise-modal input:focus,
+.buildwise-modal select:focus {
+  border-color: #789b86;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(120, 155, 134, 0.16);
+}
+.buildwise-modal {
+  overflow: hidden;
+}
+.buildwise-modal > * {
+  flex-shrink: 0;
+}
+.buildwise-modal label > div {
+  margin-top: 0.375rem;
+}
+
+@media (max-height: 720px) {
+  .auth-screen .auth-panel { padding-block: 0.75rem; }
+  .auth-screen .auth-content { padding-block: 0.25rem; }
+  .auth-screen .auth-brand { margin-bottom: 0.65rem; }
+  .auth-screen .auth-form { gap: 0.6rem; margin-top: 0.85rem; }
+  .auth-screen .auth-legal { margin-top: 0.75rem; }
+  .auth-screen h2 { font-size: 1.65rem; line-height: 1.15; }
+}
+
+@media (max-height: 560px) {
+  .auth-screen .auth-brand,
+  .auth-screen .auth-legal { display: none; }
+  .auth-screen .auth-content { justify-content: flex-start; }
+  .auth-screen .auth-form { gap: 0.4rem; margin-top: 0.5rem; }
+}
+
+@media (max-height: 440px) {
+  .auth-screen .auth-panel { padding-block: 0.5rem; }
+  .auth-screen .auth-content { padding: 0; }
+  .auth-screen .auth-description,
+  .auth-screen .auth-helper { display: none; }
+  .auth-screen .auth-form { gap: 0.35rem; margin-top: 0.35rem; }
+  .auth-screen .auth-form input:not([type='checkbox']) { min-height: 2.35rem; padding-block: 0.45rem; }
+  .auth-screen .auth-form button[type='submit'] { padding-block: 0.65rem; }
+  .auth-screen h2 { font-size: 1.4rem; line-height: 1.08; }
+}
+
+@media (max-width: 640px) {
+  .buildwise-modal { max-height: 94dvh; }
+  .buildwise-modal input, .buildwise-modal select { min-height: 40px; border-radius: 0.7rem; padding: 0.4rem 0.55rem; font-size: 0.875rem; }
+  .buildwise-modal label { display: block; }
+}
+
+@media print {
+  aside, header, button { display: none !important; }
+  main, section, .buildwise-modal { background: white !important; }
+}
+::selection { background: #d9f073; color: #173c35; }

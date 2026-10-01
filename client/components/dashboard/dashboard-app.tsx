@@ -1,0 +1,201 @@
+'use client'
+
+import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { ApiError, apiRequest, clearToken, getToken, type CostEntry, type Project, type User } from '@/lib/api'
+import { useToast } from '@/components/toast-provider'
+import { CostView } from './cost-view'
+import { DashboardHeader } from './dashboard-header'
+import { EntryModal } from './entry-modal'
+import { Overview } from './overview'
+import { ProjectModal } from './project-modal'
+import { ProjectsView } from './projects-view'
+import { ReportsView } from './reports-view'
+import { Sidebar } from './sidebar'
+import type { Entry, ViewName } from './types'
+
+export function DashboardApp() {
+  const router = useRouter()
+  const showToast = useToast()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [view, setView] = useState<ViewName>('dashboard')
+  const [projects, setProjects] = useState<Project[]>([])
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [query, setQuery] = useState('')
+  const [modal, setModal] = useState<'project' | 'labour' | 'material' | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [pageError, setPageError] = useState('')
+  const [mutationError, setMutationError] = useState('')
+  const [loadAttempt, setLoadAttempt] = useState(0)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadWorkspace() {
+      if (!getToken()) {
+        router.replace('/login')
+        return
+      }
+
+      setIsLoading(true)
+      setPageError('')
+      try {
+        const [profile, result] = await Promise.all([
+          apiRequest<{ user: User }>('/auth/me'),
+          apiRequest<{ projects: Project[] }>('/projects'),
+        ])
+        if (cancelled) return
+        setUser(profile.user)
+        setProjects(result.projects)
+      } catch (requestError) {
+        if (cancelled) return
+        if (requestError instanceof ApiError && requestError.status === 401) {
+          clearToken()
+          router.replace('/login')
+          return
+        }
+        setPageError(requestError instanceof Error ? requestError.message : 'Unable to load your workspace.')
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    }
+
+    void loadWorkspace()
+    return () => { cancelled = true }
+  }, [loadAttempt, router])
+
+  const selectedProject = projects.find((project) => project.id === selectedProjectId) || null
+  const allEntries = useMemo(() => projects.flatMap((project) => project.entries || []), [projects])
+  const labourTotal = useMemo(() => allEntries.filter((entry) => entry.type === 'labour').reduce((total, entry) => total + entry.total, 0), [allEntries])
+  const materialTotal = useMemo(() => allEntries.filter((entry) => entry.type === 'material').reduce((total, entry) => total + entry.total, 0), [allEntries])
+  const visibleEntries = useMemo(() => {
+    if (!selectedProject || (view !== 'labour' && view !== 'material')) return []
+    const search = query.trim().toLowerCase()
+    return selectedProject.entries
+      .filter((entry) => entry.type === view)
+      .filter((entry) => `${entry.item} ${entry.category} ${entry.date}`.toLowerCase().includes(search))
+  }, [query, selectedProject, view])
+  const selectedTotal = (selectedProject?.entries || [])
+    .filter((entry) => entry.type === view)
+    .reduce((total, entry) => total + entry.total, 0)
+
+  function navigate(nextView: ViewName) {
+    setView(nextView)
+    setSidebarOpen(false)
+    setQuery('')
+    setMutationError('')
+  }
+
+  async function createProject(data: Pick<Project, 'name' | 'location' | 'unit' | 'size'>) {
+    setIsSaving(true)
+    setMutationError('')
+    try {
+      const result = await apiRequest<{ project: Project }>('/projects', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      })
+      setProjects((current) => [result.project, ...current])
+      setSelectedProjectId(result.project.id)
+      setModal(null)
+      navigate('labour')
+    } catch (requestError) {
+      if (requestError instanceof ApiError && requestError.status === 401) {
+        clearToken()
+        router.replace('/login')
+        return
+      }
+      setMutationError(requestError instanceof Error ? requestError.message : 'Unable to save this project.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function createEntry(kind: 'labour' | 'material', data: Omit<Entry, 'id' | 'total' | 'projectId' | 'type'>) {
+    if (!selectedProject) return
+    setIsSaving(true)
+    setMutationError('')
+    try {
+      const result = await apiRequest<{ entry: CostEntry }>(`/projects/${selectedProject.id}/entries`, {
+        method: 'POST',
+        body: JSON.stringify({ ...data, type: kind }),
+      })
+      setProjects((current) => current.map((project) => project.id === selectedProject.id
+        ? { ...project, entries: [result.entry, ...project.entries] }
+        : project))
+      setModal(null)
+    } catch (requestError) {
+      if (requestError instanceof ApiError && requestError.status === 401) {
+        clearToken()
+        router.replace('/login')
+        return
+      }
+      setMutationError(requestError instanceof Error ? requestError.message : 'Unable to save this entry.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  function logout() {
+    clearToken()
+    showToast('You have been logged out.')
+    router.replace('/login')
+    router.refresh()
+  }
+
+  if (isLoading) {
+    return <main className="grid h-dvh place-items-center bg-[#f4f5f2] text-sm font-medium text-[#527263]" role="status">Loading your workspace…</main>
+  }
+
+  if (pageError || !user) {
+    return (
+      <main className="grid h-dvh place-items-center bg-[#f4f5f2] px-5 text-[#18211f]">
+        <section className="w-full max-w-md rounded-2xl border border-[#dfe4df] bg-[#fbfcfa] p-7 text-center">
+          <h1 className="text-xl font-semibold text-[#173c35]">Workspace unavailable</h1>
+          <p className="mt-2 text-sm text-[#7a8780]">{pageError || 'Sign in to open your workspace.'}</p>
+          {pageError ? <button onClick={() => setLoadAttempt((attempt) => attempt + 1)} className="mt-5 rounded-xl bg-[#173c35] px-4 py-2.5 text-sm font-bold text-white">Try again</button> : <button onClick={() => router.replace('/login')} className="mt-5 rounded-xl bg-[#173c35] px-4 py-2.5 text-sm font-bold text-white">Go to sign in</button>}
+        </section>
+      </main>
+    )
+  }
+
+  return (
+    <main className="h-dvh overflow-hidden bg-[#f4f5f2] text-[#18211f]">
+      <div className="flex h-full min-h-0">
+        <Sidebar
+          open={sidebarOpen}
+          view={view}
+          hasSelectedProject={Boolean(selectedProject)}
+          onNavigate={navigate}
+          onClose={() => setSidebarOpen(false)}
+          onLogout={logout}
+        />
+        <section className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <DashboardHeader view={view} project={selectedProject} user={user} onOpenMenu={() => setSidebarOpen(true)} />
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
+            <div className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 lg:px-10">
+              {view === 'dashboard' && <Overview name={user.name} projects={projects} onProjects={() => navigate('projects')} onNew={() => { setMutationError(''); setModal('project') }} labour={labourTotal} material={materialTotal} />}
+              {view === 'projects' && <ProjectsView projects={projects} onNew={() => { setMutationError(''); setModal('project') }} onOpen={(project) => { setSelectedProjectId(project.id); navigate('labour') }} />}
+              {(view === 'labour' || view === 'material') && selectedProject && (
+                <CostView
+                  kind={view}
+                  project={selectedProject}
+                  rows={visibleEntries}
+                  total={selectedTotal}
+                  query={query}
+                  onQueryChange={setQuery}
+                  onAdd={() => { setMutationError(''); setModal(view) }}
+                  onBack={() => { setSelectedProjectId(null); navigate('projects') }}
+                />
+              )}
+              {view === 'reports' && <ReportsView labour={labourTotal} material={materialTotal} projects={projects} />}
+            </div>
+          </div>
+        </section>
+      </div>
+      {modal === 'project' && <ProjectModal key="project" onClose={() => setModal(null)} onCreate={createProject} isSaving={isSaving} error={mutationError} />}
+      {(modal === 'labour' || modal === 'material') && <EntryModal key={modal} kind={modal} onClose={() => setModal(null)} onCreate={(entry) => createEntry(modal, entry)} isSaving={isSaving} error={mutationError} />}
+    </main>
+  )
+}
