@@ -23,7 +23,8 @@ export function DashboardApp() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [query, setQuery] = useState('')
-  const [modal, setModal] = useState<'project' | 'labour' | 'material' | null>(null)
+  const [modal, setModal] = useState<'project' | 'labour' | 'material' | 'edit-entry' | null>(null)
+  const [entryToEdit, setEntryToEdit] = useState<Entry | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [pageError, setPageError] = useState('')
@@ -137,6 +138,54 @@ export function DashboardApp() {
     }
   }
 
+  async function updateEntry(entry: Entry, data: Omit<Entry, 'id' | 'total' | 'projectId' | 'type'>) {
+    if (!selectedProject) return
+    setIsSaving(true)
+    setMutationError('')
+    try {
+      const result = await apiRequest<{ entry: CostEntry }>(`/projects/${selectedProject.id}/entries/${entry.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      })
+      setProjects((current) => current.map((project) => project.id === selectedProject.id
+        ? { ...project, entries: project.entries.map((currentEntry) => currentEntry.id === entry.id ? result.entry : currentEntry) }
+        : project))
+      setModal(null)
+      setEntryToEdit(null)
+      showToast('Entry updated.')
+    } catch (requestError) {
+      if (requestError instanceof ApiError && requestError.status === 401) {
+        clearToken()
+        router.replace('/login')
+        return
+      }
+      setMutationError(requestError instanceof Error ? requestError.message : 'Unable to update this entry.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function deleteEntry(entry: Entry) {
+    if (!selectedProject || !window.confirm(`Delete "${entry.item}" entry? This cannot be undone.`)) return
+    setIsSaving(true)
+    try {
+      await apiRequest<{ message: string }>(`/projects/${selectedProject.id}/entries/${entry.id}`, { method: 'DELETE' })
+      setProjects((current) => current.map((project) => project.id === selectedProject.id
+        ? { ...project, entries: project.entries.filter((currentEntry) => currentEntry.id !== entry.id) }
+        : project))
+      showToast('Entry deleted.')
+    } catch (requestError) {
+      if (requestError instanceof ApiError && requestError.status === 401) {
+        clearToken()
+        router.replace('/login')
+        return
+      }
+      showToast(requestError instanceof Error ? requestError.message : 'Unable to delete this entry.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   function logout() {
     clearToken()
     showToast('You have been logged out.')
@@ -186,6 +235,9 @@ export function DashboardApp() {
                   query={query}
                   onQueryChange={setQuery}
                   onAdd={() => { setMutationError(''); setModal(view) }}
+                  onEdit={(entry) => { setEntryToEdit(entry); setMutationError(''); setModal('edit-entry') }}
+                  onDelete={deleteEntry}
+                  isBusy={isSaving}
                   onBack={() => { setSelectedProjectId(null); navigate('projects') }}
                 />
               )}
@@ -195,7 +247,8 @@ export function DashboardApp() {
         </section>
       </div>
       {modal === 'project' && <ProjectModal key="project" onClose={() => setModal(null)} onCreate={createProject} isSaving={isSaving} error={mutationError} />}
-      {(modal === 'labour' || modal === 'material') && <EntryModal key={modal} kind={modal} onClose={() => setModal(null)} onCreate={(entry) => createEntry(modal, entry)} isSaving={isSaving} error={mutationError} />}
+      {(modal === 'labour' || modal === 'material') && <EntryModal key={modal} kind={modal} onClose={() => setModal(null)} onSave={(entry) => createEntry(modal, entry)} isSaving={isSaving} error={mutationError} />}
+      {modal === 'edit-entry' && entryToEdit && <EntryModal key={entryToEdit.id} kind={entryToEdit.type} entry={entryToEdit} onClose={() => { setModal(null); setEntryToEdit(null) }} onSave={(data) => updateEntry(entryToEdit, data)} isSaving={isSaving} error={mutationError} />}
     </main>
   )
 }

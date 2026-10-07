@@ -93,4 +93,35 @@ async function createEntry(req, res) {
   return res.status(201).json({ entry: publicEntry(entry, project._id) })
 }
 
-module.exports = { listProjects, createProject, listEntries, createEntry }
+async function updateEntry(req, res) {
+  const project = await findOwnedProject(req)
+  const entry = project.entries.id(req.params.entryId)
+  if (!entry) throw new RequestError('Entry not found.', 404)
+
+  const { date } = req.body
+  if (!validDate(date)) throw new RequestError('Enter a valid entry date.')
+
+  const quantity = positiveNumber(req.body.quantity, 'Quantity')
+  const rate = positiveNumber(req.body.rate, 'Rate', true)
+  entry.date = date
+  entry.item = requiredText(req.body.item, 'Item')
+  entry.category = requiredText(req.body.category, 'Category', 80)
+  entry.quantity = quantity
+  entry.unit = requiredText(req.body.unit, 'Unit', 40)
+  entry.rate = rate
+  entry.total = quantity * rate
+  await project.save()
+
+  return res.json({ entry: publicEntry(entry, project._id) })
+}
+
+async function deleteEntry(req, res) {
+  const project = await findOwnedProject(req)
+  const entry = project.entries.id(req.params.entryId)
+  if (!entry) throw new RequestError('Entry not found.', 404)
+  entry.deleteOne()
+  await project.save()
+  return res.json({ message: 'Entry deleted.' })
+}
+
+module.exports = { listProjects, createProject, listEntries, createEntry, updateEntry, deleteEntry }
