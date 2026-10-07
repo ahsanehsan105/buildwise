@@ -13,11 +13,19 @@ type OverviewProps = {
 }
 
 export function Overview({ name, projects, labour, material, onProjects, onNew }: OverviewProps) {
+  const today = new Intl.DateTimeFormat('en-PK', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'Asia/Karachi',
+  }).format(new Date())
+
   return (
     <>
       <div className="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
-          <p className="mb-2 text-xs font-bold uppercase tracking-[.18em] text-[#a08a50]">Monday, September 29, 2026</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-[.18em] text-[#a08a50]">{today}</p>
           <h1 className="text-3xl font-semibold text-[#173c35] sm:text-4xl">Welcome, {name}<span className="text-[#d9a441]">.</span></h1>
           <p className="mt-2 text-sm text-[#7a8780]">Manage your Pakistan construction projects and daily costs.</p>
         </div>

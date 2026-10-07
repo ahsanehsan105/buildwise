@@ -30,7 +30,7 @@ export function EntryModal({ kind, entry, onClose, onSave, isSaving, error }: En
       <p className="text-xs font-bold uppercase tracking-[.16em] text-[#a08a50]">Daily ledger</p>
       <h2 className="mt-1 text-xl font-semibold text-[#173c35]">{entry ? 'Edit' : 'Add'} {kind === 'labour' ? 'labour' : 'material'} entry</h2>
       <div className="mt-3 grid shrink-0 grid-cols-2 gap-x-3 gap-y-2">
-        <Field label="Date"><input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></Field>
+        <div className={kind === 'material' ? 'col-span-2' : ''}><Field label="Date"><input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></Field></div>
         <Field label={kind === 'labour' ? 'Name' : 'Item'}><input placeholder={kind === 'labour' ? 'e.g. Mason crew' : 'e.g. Bricks (Awwal)'} value={form.item} onChange={(event) => setForm({ ...form, item: event.target.value })} /></Field>
         <Field label="Category"><input placeholder={kind === 'labour' ? 'e.g. Masonry' : 'e.g. Bricks'} value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} /></Field>
         {kind === 'labour' ? (
