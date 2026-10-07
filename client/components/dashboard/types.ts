@@ -25,3 +25,9 @@ export const money = (amount: number) => new Intl.NumberFormat('en-PK', {
   currency: 'PKR',
   maximumFractionDigits: 0,
 }).format(amount)
+
+export const moneyRate = (amount: number) => new Intl.NumberFormat('en-PK', {
+  style: 'currency',
+  currency: 'PKR',
+  maximumFractionDigits: 2,
+}).format(amount)

@@ -1,7 +1,7 @@
 import { ArrowLeft, Plus, Printer, Search } from 'lucide-react'
 import { printTableReport } from '@/lib/print-table-report'
 import type { Entry, Project } from './types'
-import { money } from './types'
+import { money, moneyRate } from './types'
 import { EntryTable, PageHeading } from './shared'
 
 type CostViewProps = {
@@ -23,19 +23,16 @@ export function CostView({ kind, project, rows, total, query, onQueryChange, onA
 
   function printLedger() {
     const exportTotal = rows.reduce((sum, entry) => sum + entry.total, 0)
+    const headers = kind === 'labour'
+      ? ['Date', 'Name', 'Category', 'Price (PKR)', 'Total (PKR)']
+      : ['Date', 'Item', 'Category', 'Quantity', 'Rate (PKR)', 'Total (PKR)']
     printTableReport({
       title: `${project.name} · ${title}`,
       description: `${project.location} · ${project.size} ${project.unit}${query ? ` · Filter: ${query}` : ''}`,
-      headers: ['Date', 'Item', 'Category', 'Quantity', 'Unit', 'Rate (PKR)', 'Total (PKR)'],
-      rows: rows.map((entry) => [
-        entry.date,
-        entry.item,
-        entry.category,
-        entry.quantity,
-        entry.unit,
-        money(entry.rate),
-        money(entry.total),
-      ]),
+      headers,
+      rows: rows.map((entry) => kind === 'labour'
+        ? [entry.date, entry.item, entry.category, moneyRate(entry.rate), money(entry.total)]
+        : [entry.date, entry.item, entry.category, entry.quantity, moneyRate(entry.rate), money(entry.total)]),
       emptyMessage: 'No entries match the current ledger view.',
       total: { label: 'Displayed ledger total', value: money(exportTotal) },
     })
@@ -54,7 +51,7 @@ export function CostView({ kind, project, rows, total, query, onQueryChange, onA
         <div className="rounded-2xl bg-[#173c35] px-5 py-3 text-white"><p className="text-xs text-[#b9c8c0]">Section total</p><p className="text-xl font-bold">{money(total)}</p></div>
         <label className="flex items-center gap-2 rounded-xl border border-[#dfe4df] bg-[#fbfcfa] px-3 py-2 text-sm text-[#839088]"><Search /><input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Search item, category, date..." className="w-56 bg-transparent outline-none" /></label>
       </div>
-      <EntryTable rows={rows} onEdit={onEdit} onDelete={onDelete} isBusy={isBusy} />
+      <EntryTable kind={kind} rows={rows} onEdit={onEdit} onDelete={onDelete} isBusy={isBusy} />
     </>
   )
 }

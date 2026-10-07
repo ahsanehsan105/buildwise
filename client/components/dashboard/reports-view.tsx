@@ -1,7 +1,7 @@
 import { Package, Printer, Users, Wallet } from 'lucide-react'
 import { printTableReport } from '@/lib/print-table-report'
 import type { Project } from './types'
-import { money } from './types'
+import { money, moneyRate } from './types'
 import { PageHeading, StatCard } from './shared'
 
 type ReportsViewProps = {
@@ -27,7 +27,7 @@ export function ReportsView({ labour, material, projects }: ReportsViewProps) {
         entry.category,
         entry.quantity,
         entry.unit,
-        money(entry.rate),
+        moneyRate(entry.rate),
         money(entry.total),
       ]),
       emptyMessage: 'No construction costs recorded for this project yet.',
