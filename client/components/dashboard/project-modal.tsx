@@ -24,6 +24,7 @@ export function ProjectModal({ project, onClose, onSave, isSaving, error }: Proj
   return (
     <ModalShell
       onClose={onClose}
+      showDragHandle={false}
       header={(
         <div className="min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-[.16em] text-[#a08a50]">Start a workspace</p>
