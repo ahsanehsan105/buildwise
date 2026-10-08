@@ -77,6 +77,7 @@ export function DashboardApp() {
     return selectedProject.entries
       .filter((entry) => entry.type === view)
       .filter((entry) => `${entry.item} ${entry.category} ${entry.date}`.toLowerCase().includes(search))
+      .sort((first, second) => second.date.localeCompare(first.date))
   }, [query, selectedProject, view])
   const selectedTotal = (selectedProject?.entries || [])
     .filter((entry) => entry.type === view)

@@ -1,4 +1,5 @@
 import { Pencil, Plus, Trash2, type LucideIcon } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import type { Entry } from './types'
 import { money, moneyRate } from './types'
 
@@ -22,15 +23,41 @@ export function StatCard({ icon: Icon, label, value }: { icon: LucideIcon; label
 }
 
 export function EntryTable({ kind, rows, onEdit, onDelete, isBusy }: { kind: 'labour' | 'material'; rows: Entry[]; onEdit: (entry: Entry) => void; onDelete: (entry: Entry) => void; isBusy: boolean }) {
+  const pageSize = 10
+  const [page, setPage] = useState(0)
+  const pageCount = Math.ceil(rows.length / pageSize)
+  const currentPage = Math.min(page, Math.max(pageCount - 1, 0))
+  const pageRows = rows.slice(currentPage * pageSize, (currentPage + 1) * pageSize)
+
+  useEffect(() => {
+    setPage(0)
+  }, [rows])
+
+  useEffect(() => {
+    if (pageCount > 0 && page >= pageCount) setPage(pageCount - 1)
+  }, [page, pageCount])
+
   return (
     <div className="overflow-hidden rounded-2xl border border-[#dfe4df] bg-[#fbfcfa]">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead className="bg-[#f0f4ef] text-xs uppercase tracking-wider text-[#789087]"><tr><th className="px-5 py-4">Date</th><th className="px-5 py-4">{kind === 'labour' ? 'Name' : 'Item'}</th><th className="px-5 py-4">Category</th>{kind === 'material' && <th className="px-5 py-4">Quantity</th>}<th className="px-5 py-4">{kind === 'labour' ? 'Price (PKR)' : 'Rate (PKR)'}</th><th className="px-5 py-4 text-right">Total (PKR)</th><th className="px-5 py-4 text-right">Actions</th></tr></thead>
-          <tbody>{rows.map((entry) => <tr key={entry.id} className="border-t border-[#e7ebe7]"><td className="px-5 py-4 text-[#697a72]">{entry.date}</td><td className="px-5 py-4 font-semibold text-[#263d33]">{entry.item}</td><td className="px-5 py-4"><span className="rounded-full bg-[#e7f0df] px-2.5 py-1 text-xs font-semibold text-[#527263]">{entry.category}</span></td>{kind === 'material' && <td className="px-5 py-4">{entry.quantity}</td>}<td className="px-5 py-4">{moneyRate(entry.rate)}</td><td className="px-5 py-4 text-right font-bold text-[#173c35]">{money(entry.total)}</td><td className="px-5 py-4"><div className="flex justify-end gap-2"><button type="button" onClick={() => onEdit(entry)} disabled={isBusy} aria-label={`Edit ${entry.item}`} title="Edit entry" className="grid size-9 place-items-center rounded-lg text-[#527263] hover:bg-[#e7f0df] disabled:opacity-50"><Pencil size={16} /></button><button type="button" onClick={() => onDelete(entry)} disabled={isBusy} aria-label={`Delete ${entry.item}`} title="Delete entry" className="grid size-9 place-items-center rounded-lg text-red-700 hover:bg-red-50 disabled:opacity-50"><Trash2 size={16} /></button></div></td></tr>)}</tbody>
+          <tbody>{pageRows.map((entry) => <tr key={entry.id} className="border-t border-[#e7ebe7]"><td className="px-5 py-4 text-[#697a72]">{entry.date}</td><td className="px-5 py-4 font-semibold text-[#263d33]">{entry.item}</td><td className="px-5 py-4"><span className="rounded-full bg-[#e7f0df] px-2.5 py-1 text-xs font-semibold text-[#527263]">{entry.category}</span></td>{kind === 'material' && <td className="px-5 py-4">{entry.quantity}</td>}<td className="px-5 py-4">{moneyRate(entry.rate)}</td><td className="px-5 py-4 text-right font-bold text-[#173c35]">{money(entry.total)}</td><td className="px-5 py-4"><div className="flex justify-end gap-2"><button type="button" onClick={() => onEdit(entry)} disabled={isBusy} aria-label={`Edit ${entry.item}`} title="Edit entry" className="grid size-9 place-items-center rounded-lg text-[#527263] hover:bg-[#e7f0df] disabled:opacity-50"><Pencil size={16} /></button><button type="button" onClick={() => onDelete(entry)} disabled={isBusy} aria-label={`Delete ${entry.item}`} title="Delete entry" className="grid size-9 place-items-center rounded-lg text-red-700 hover:bg-red-50 disabled:opacity-50"><Trash2 size={16} /></button></div></td></tr>)}</tbody>
         </table>
       </div>
       {rows.length === 0 && <p className="p-8 text-center text-sm text-[#7d8982]">No entries match your search.</p>}
+      {rows.length > 0 && (
+        <div className="flex flex-col gap-3 border-t border-[#e7ebe7] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-[#7d8982]">Showing {currentPage * pageSize + 1}–{Math.min((currentPage + 1) * pageSize, rows.length)} of {rows.length} entries</p>
+          {pageCount > 1 && (
+            <nav aria-label="Ledger pages" className="flex items-center gap-2">
+              <button type="button" onClick={() => setPage(currentPage - 1)} disabled={currentPage === 0} className="rounded-lg border border-[#dfe4df] px-3 py-2 text-sm font-semibold text-[#355047] disabled:cursor-not-allowed disabled:opacity-50">Previous</button>
+              <span aria-live="polite" className="px-2 text-sm text-[#697a72]">Page {currentPage + 1} of {pageCount}</span>
+              <button type="button" onClick={() => setPage(currentPage + 1)} disabled={currentPage >= pageCount - 1} className="rounded-lg border border-[#dfe4df] px-3 py-2 text-sm font-semibold text-[#355047] disabled:cursor-not-allowed disabled:opacity-50">Next</button>
+            </nav>
+          )}
+        </div>
+      )}
     </div>
   )
 }

@@ -3,8 +3,8 @@
 import Link from 'next/link'
 import { Eye, EyeOff, Ruler } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
-import { apiRequest, clearToken, saveToken, type User } from '@/lib/api'
+import { useEffect, useState } from 'react'
+import { apiRequest, clearToken, getToken, saveToken, type User } from '@/lib/api'
 import { useToast } from '@/components/toast-provider'
 
 type AuthMode = 'login' | 'signup'
@@ -21,6 +21,10 @@ export function AuthShell({ mode }: { mode: AuthMode }) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const isLogin = mode === 'login'
 
+  useEffect(() => {
+    if (getToken()) router.replace('/dashboard')
+  }, [router])
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
@@ -34,6 +38,7 @@ export function AuthShell({ mode }: { mode: AuthMode }) {
         saveToken(result.token, rememberMe)
         showToast('Signed in successfully.')
         router.replace('/dashboard')
+        router.refresh()
       } else {
         clearToken()
         showToast('User created successfully. Please sign in.')
