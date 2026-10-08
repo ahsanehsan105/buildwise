@@ -15,6 +15,18 @@ import { ReportsView } from './reports-view'
 import { Sidebar } from './sidebar'
 import type { Entry, ViewName } from './types'
 
+function readDashboardLocation(projects: Project[]) {
+  const params = new URLSearchParams(window.location.search)
+  const requestedView = params.get('view')
+  const validViews: ViewName[] = ['dashboard', 'projects', 'reports', 'labour', 'material']
+  let view = validViews.includes(requestedView as ViewName) ? requestedView as ViewName : 'dashboard'
+  const requestedProjectId = params.get('project')
+  const projectId = projects.some((project) => project.id === requestedProjectId) ? requestedProjectId : null
+
+  if ((view === 'labour' || view === 'material') && !projectId) view = 'projects'
+  return { view, projectId }
+}
+
 export function DashboardApp() {
   const router = useRouter()
   const showToast = useToast()
@@ -53,6 +65,9 @@ export function DashboardApp() {
         if (cancelled) return
         setUser(profile.user)
         setProjects(result.projects)
+        const location = readDashboardLocation(result.projects)
+        setView(location.view)
+        setSelectedProjectId(location.projectId)
       } catch (requestError) {
         if (cancelled) return
         if (requestError instanceof ApiError && requestError.status === 401) {
@@ -70,6 +85,21 @@ export function DashboardApp() {
     return () => { cancelled = true }
   }, [loadAttempt, router])
 
+  useEffect(() => {
+    if (isLoading) return
+
+    function restoreLocation() {
+      const location = readDashboardLocation(projects)
+      setView(location.view)
+      setSelectedProjectId(location.projectId)
+      setQuery('')
+      setMutationError('')
+    }
+
+    window.addEventListener('popstate', restoreLocation)
+    return () => window.removeEventListener('popstate', restoreLocation)
+  }, [isLoading, projects])
+
   const selectedProject = projects.find((project) => project.id === selectedProjectId) || null
   const allEntries = useMemo(() => projects.flatMap((project) => project.entries || []), [projects])
   const labourTotal = useMemo(() => allEntries.filter((entry) => entry.type === 'labour').reduce((total, entry) => total + entry.total, 0), [allEntries])
@@ -86,11 +116,17 @@ export function DashboardApp() {
     .filter((entry) => entry.type === view)
     .reduce((total, entry) => total + entry.total, 0)
 
-  function navigate(nextView: ViewName) {
+  function navigate(nextView: ViewName, projectId = selectedProjectId) {
     setView(nextView)
+    setSelectedProjectId(projectId)
     setSidebarOpen(false)
     setQuery('')
     setMutationError('')
+    const params = new URLSearchParams()
+    if (nextView !== 'dashboard') params.set('view', nextView)
+    if (projectId) params.set('project', projectId)
+    const queryString = params.toString()
+    window.history.pushState(null, '', queryString ? `/dashboard?${queryString}` : '/dashboard')
   }
 
   async function createProject(data: Pick<Project, 'name' | 'location' | 'address' | 'unit' | 'size'>) {
@@ -102,9 +138,8 @@ export function DashboardApp() {
         body: JSON.stringify(data),
       })
       setProjects((current) => [result.project, ...current])
-      setSelectedProjectId(result.project.id)
       setModal(null)
-      navigate('labour')
+      navigate('labour', result.project.id)
     } catch (requestError) {
       if (requestError instanceof ApiError && requestError.status === 401) {
         clearToken()
@@ -149,7 +184,7 @@ export function DashboardApp() {
     try {
       await apiRequest<{ message: string }>(`/projects/${project.id}`, { method: 'DELETE' })
       setProjects((current) => current.filter((currentProject) => currentProject.id !== project.id))
-      if (selectedProjectId === project.id) setSelectedProjectId(null)
+      if (selectedProjectId === project.id) navigate('projects', null)
       setPendingDelete(null)
       showToast('Project deleted.')
     } catch (requestError) {
@@ -277,7 +312,7 @@ export function DashboardApp() {
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
             <div className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 lg:px-10">
               {view === 'dashboard' && <Overview name={user.name} projects={projects} onProjects={() => navigate('projects')} onNew={() => { setMutationError(''); setModal('project') }} labour={labourTotal} material={materialTotal} />}
-              {view === 'projects' && <ProjectsView projects={projects} onNew={() => { setProjectToEdit(null); setMutationError(''); setModal('project') }} onEdit={(project) => { setProjectToEdit(project); setMutationError(''); setModal('project') }} onDelete={(project) => setPendingDelete({ type: 'project', project })} onOpen={(project) => { setSelectedProjectId(project.id); navigate('labour') }} />}
+              {view === 'projects' && <ProjectsView projects={projects} onNew={() => { setProjectToEdit(null); setMutationError(''); setModal('project') }} onEdit={(project) => { setProjectToEdit(project); setMutationError(''); setModal('project') }} onDelete={(project) => setPendingDelete({ type: 'project', project })} onOpen={(project) => navigate('labour', project.id)} />}
               {(view === 'labour' || view === 'material') && selectedProject && (
                 <CostView
                   kind={view}
@@ -290,7 +325,7 @@ export function DashboardApp() {
                   onEdit={(entry) => { setEntryToEdit(entry); setMutationError(''); setModal('edit-entry') }}
                   onDelete={(entry) => setPendingDelete({ type: 'entry', entry })}
                   isBusy={isSaving}
-                  onBack={() => { setSelectedProjectId(null); navigate('projects') }}
+                  onBack={() => navigate('projects', null)}
                 />
               )}
               {view === 'reports' && <ReportsView labour={labourTotal} material={materialTotal} projects={projects} />}
