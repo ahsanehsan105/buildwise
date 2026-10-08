@@ -18,7 +18,7 @@ export function ReportsView({ labour, material, projects }: ReportsViewProps) {
     const projectTotal = entries.reduce((sum, entry) => sum + entry.total, 0)
     printTableReport({
       title: `${project.name} · Construction Cost Report`,
-      description: `${project.location} · ${project.size} ${project.unit} · ${project.status}`,
+      description: `${project.location} · ${project.address} · ${project.size} ${project.unit} · ${project.status}`,
       headers: ['Date', 'Type', 'Item', 'Category', 'Quantity', 'Unit', 'Rate (PKR)', 'Total (PKR)'],
       rows: entries.map((entry) => [
         entry.date,

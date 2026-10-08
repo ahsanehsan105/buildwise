@@ -22,6 +22,7 @@ function publicProject(project) {
     id: project._id.toString(),
     name: project.name,
     location: project.location,
+    address: project.address,
     unit: project.unit,
     size: project.size,
     status: project.status,
@@ -41,11 +42,29 @@ async function createProject(req, res) {
     owner: req.userId,
     name: requiredText(req.body.name, 'Project name'),
     location: requiredText(req.body.location, 'Location'),
+    address: requiredText(req.body.address, 'Street / address', 200),
     unit: requiredText(req.body.unit, 'Measurement unit', 30),
     size: positiveNumber(req.body.size, 'Size'),
     status: 'Draft',
   })
   return res.status(201).json({ project: publicProject(project) })
+}
+
+async function updateProject(req, res) {
+  const project = await findOwnedProject(req)
+  project.name = requiredText(req.body.name, 'Project name')
+  project.location = requiredText(req.body.location, 'Location')
+  project.address = requiredText(req.body.address, 'Street / address', 200)
+  project.unit = requiredText(req.body.unit, 'Measurement unit', 30)
+  project.size = positiveNumber(req.body.size, 'Size')
+  await project.save()
+  return res.json({ project: publicProject(project) })
+}
+
+async function deleteProject(req, res) {
+  const project = await findOwnedProject(req)
+  await project.deleteOne()
+  return res.json({ message: 'Project deleted.' })
 }
 
 async function findOwnedProject(req) {
@@ -124,4 +143,4 @@ async function deleteEntry(req, res) {
   return res.json({ message: 'Entry deleted.' })
 }
 
-module.exports = { listProjects, createProject, listEntries, createEntry, updateEntry, deleteEntry }
+module.exports = { listProjects, createProject, updateProject, deleteProject, listEntries, createEntry, updateEntry, deleteEntry }

@@ -15,6 +15,7 @@ const projectSchema = new mongoose.Schema({
   owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   name: { type: String, required: true, trim: true, maxlength: 120 },
   location: { type: String, required: true, trim: true, maxlength: 120 },
+  address: { type: String, trim: true, maxlength: 200, default: '' },
   unit: { type: String, required: true, trim: true, maxlength: 30 },
   size: { type: Number, required: true, min: 0.01 },
   status: { type: String, enum: ['Draft', 'In progress', 'Completed'], default: 'Draft' },

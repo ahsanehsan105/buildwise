@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ApiError, apiRequest, clearToken, getToken, type CostEntry, type Project, type User } from '@/lib/api'
 import { useToast } from '@/components/toast-provider'
 import { CostView } from './cost-view'
+import { ConfirmDeleteDialog } from './confirm-delete-dialog'
 import { DashboardHeader } from './dashboard-header'
 import { EntryModal } from './entry-modal'
 import { Overview } from './overview'
@@ -24,7 +25,9 @@ export function DashboardApp() {
   const [user, setUser] = useState<User | null>(null)
   const [query, setQuery] = useState('')
   const [modal, setModal] = useState<'project' | 'labour' | 'material' | 'edit-entry' | null>(null)
+  const [projectToEdit, setProjectToEdit] = useState<Project | null>(null)
   const [entryToEdit, setEntryToEdit] = useState<Entry | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<{ type: 'project'; project: Project } | { type: 'entry'; entry: Entry } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [pageError, setPageError] = useState('')
@@ -90,7 +93,7 @@ export function DashboardApp() {
     setMutationError('')
   }
 
-  async function createProject(data: Pick<Project, 'name' | 'location' | 'unit' | 'size'>) {
+  async function createProject(data: Pick<Project, 'name' | 'location' | 'address' | 'unit' | 'size'>) {
     setIsSaving(true)
     setMutationError('')
     try {
@@ -109,6 +112,53 @@ export function DashboardApp() {
         return
       }
       setMutationError(requestError instanceof Error ? requestError.message : 'Unable to save this project.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function updateProject(data: Pick<Project, 'name' | 'location' | 'address' | 'unit' | 'size'>) {
+    if (!projectToEdit) return
+    setIsSaving(true)
+    setMutationError('')
+    try {
+      const result = await apiRequest<{ project: Project }>(`/projects/${projectToEdit.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      })
+      setProjects((current) => current.map((project) => project.id === result.project.id ? result.project : project))
+      setModal(null)
+      setProjectToEdit(null)
+      showToast('Project updated.')
+    } catch (requestError) {
+      if (requestError instanceof ApiError && requestError.status === 401) {
+        clearToken()
+        router.replace('/login')
+        return
+      }
+      setMutationError(requestError instanceof ApiError && (requestError.status === 404 || requestError.status === 405)
+        ? 'The configured API does not support project updates yet. Deploy the latest server changes, then try again.'
+        : requestError instanceof Error ? requestError.message : 'Unable to update this project.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function deleteProject(project: Project) {
+    setIsSaving(true)
+    try {
+      await apiRequest<{ message: string }>(`/projects/${project.id}`, { method: 'DELETE' })
+      setProjects((current) => current.filter((currentProject) => currentProject.id !== project.id))
+      if (selectedProjectId === project.id) setSelectedProjectId(null)
+      setPendingDelete(null)
+      showToast('Project deleted.')
+    } catch (requestError) {
+      if (requestError instanceof ApiError && requestError.status === 401) {
+        clearToken()
+        router.replace('/login')
+        return
+      }
+      showToast(requestError instanceof Error ? requestError.message : 'Unable to delete this project.')
     } finally {
       setIsSaving(false)
     }
@@ -167,13 +217,14 @@ export function DashboardApp() {
   }
 
   async function deleteEntry(entry: Entry) {
-    if (!selectedProject || !window.confirm(`Delete "${entry.item}" entry? This cannot be undone.`)) return
+    if (!selectedProject) return
     setIsSaving(true)
     try {
       await apiRequest<{ message: string }>(`/projects/${selectedProject.id}/entries/${entry.id}`, { method: 'DELETE' })
       setProjects((current) => current.map((project) => project.id === selectedProject.id
         ? { ...project, entries: project.entries.filter((currentEntry) => currentEntry.id !== entry.id) }
         : project))
+      setPendingDelete(null)
       showToast('Entry deleted.')
     } catch (requestError) {
       if (requestError instanceof ApiError && requestError.status === 401) {
@@ -226,7 +277,7 @@ export function DashboardApp() {
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
             <div className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 lg:px-10">
               {view === 'dashboard' && <Overview name={user.name} projects={projects} onProjects={() => navigate('projects')} onNew={() => { setMutationError(''); setModal('project') }} labour={labourTotal} material={materialTotal} />}
-              {view === 'projects' && <ProjectsView projects={projects} onNew={() => { setMutationError(''); setModal('project') }} onOpen={(project) => { setSelectedProjectId(project.id); navigate('labour') }} />}
+              {view === 'projects' && <ProjectsView projects={projects} onNew={() => { setProjectToEdit(null); setMutationError(''); setModal('project') }} onEdit={(project) => { setProjectToEdit(project); setMutationError(''); setModal('project') }} onDelete={(project) => setPendingDelete({ type: 'project', project })} onOpen={(project) => { setSelectedProjectId(project.id); navigate('labour') }} />}
               {(view === 'labour' || view === 'material') && selectedProject && (
                 <CostView
                   kind={view}
@@ -237,7 +288,7 @@ export function DashboardApp() {
                   onQueryChange={setQuery}
                   onAdd={() => { setMutationError(''); setModal(view) }}
                   onEdit={(entry) => { setEntryToEdit(entry); setMutationError(''); setModal('edit-entry') }}
-                  onDelete={deleteEntry}
+                  onDelete={(entry) => setPendingDelete({ type: 'entry', entry })}
                   isBusy={isSaving}
                   onBack={() => { setSelectedProjectId(null); navigate('projects') }}
                 />
@@ -247,9 +298,20 @@ export function DashboardApp() {
           </div>
         </section>
       </div>
-      {modal === 'project' && <ProjectModal key="project" onClose={() => setModal(null)} onCreate={createProject} isSaving={isSaving} error={mutationError} />}
+      {modal === 'project' && <ProjectModal key={projectToEdit?.id || 'new-project'} project={projectToEdit || undefined} onClose={() => { setModal(null); setProjectToEdit(null) }} onSave={projectToEdit ? updateProject : createProject} isSaving={isSaving} error={mutationError} />}
       {(modal === 'labour' || modal === 'material') && <EntryModal key={modal} kind={modal} onClose={() => setModal(null)} onSave={(entry) => createEntry(modal, entry)} isSaving={isSaving} error={mutationError} />}
       {modal === 'edit-entry' && entryToEdit && <EntryModal key={entryToEdit.id} kind={entryToEdit.type} entry={entryToEdit} onClose={() => { setModal(null); setEntryToEdit(null) }} onSave={(data) => updateEntry(entryToEdit, data)} isSaving={isSaving} error={mutationError} />}
+      {pendingDelete && (
+        <ConfirmDeleteDialog
+          title={pendingDelete.type === 'project' ? 'Delete this project?' : 'Delete this entry?'}
+          description={pendingDelete.type === 'project'
+            ? `“${pendingDelete.project.name}” and all its cost entries will be permanently deleted. This action cannot be undone.`
+            : `“${pendingDelete.entry.item}” will be permanently deleted. This action cannot be undone.`}
+          isDeleting={isSaving}
+          onCancel={() => { if (!isSaving) setPendingDelete(null) }}
+          onConfirm={() => void (pendingDelete.type === 'project' ? deleteProject(pendingDelete.project) : deleteEntry(pendingDelete.entry))}
+        />
+      )}
     </main>
   )
 }

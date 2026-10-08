@@ -20,6 +20,7 @@ export type Project = {
   id: string
   name: string
   location: string
+  address: string
   unit: string
   size: number
   status: string
@@ -67,7 +68,19 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
   } catch {
     throw new ApiError(`Cannot reach Buildwise API at ${API_URL}. Make sure the server is running and allows this app's origin.`, 0)
   }
-  const payload = await response.json().catch(() => ({}))
-  if (!response.ok) throw new ApiError(payload.message || 'The request could not be completed.', response.status)
+  const responseText = await response.text()
+  let payload: { message?: string } = {}
+  if (responseText) {
+    try {
+      payload = JSON.parse(responseText) as { message?: string }
+    } catch {
+      if (!response.ok) {
+        throw new ApiError(`API request failed (${response.status} ${response.statusText}). The server returned an unexpected response.`, response.status)
+      }
+      throw new ApiError('The server returned an invalid response. Please try again.', response.status)
+    }
+  }
+  if (!response.ok) throw new ApiError(payload.message || `API request failed (${response.status} ${response.statusText}).`, response.status)
+  if (!responseText) throw new ApiError('The server returned an empty response. Please try again.', response.status)
   return payload as T
 }
