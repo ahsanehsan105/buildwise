@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Eye, EyeOff, Ruler } from 'lucide-react'
+import { Eye, EyeOff, Home } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { apiRequest, clearToken, getToken, saveToken, type User } from '@/lib/api'
@@ -57,7 +57,7 @@ export function AuthShell({ mode }: { mode: AuthMode }) {
         <section className="hidden bg-[#173c35] p-10 text-white lg:flex lg:flex-col lg:justify-between xl:p-14">
           <div>
             <Link href="/" className="flex items-center gap-2.5">
-              <span className="grid size-9 place-items-center rounded-xl bg-[#d9f073] text-[#173c35]"><Ruler /></span>
+              <span className="grid size-9 place-items-center rounded-xl bg-[#d9f073] text-[#173c35]"><Home /></span>
               <span><strong className="block text-[15px] tracking-tight">Buildwise</strong><small className="text-[10px] font-medium uppercase tracking-[0.18em] text-[#b8cbc0]">Cost intelligence</small></span>
             </Link>
             <div className="auth-pitch mt-16 max-w-md">
@@ -76,7 +76,7 @@ export function AuthShell({ mode }: { mode: AuthMode }) {
           </div>
 
           <div className="auth-content absolute left-1/2 top-1/2 flex w-[calc(100%-2.5rem)] max-w-[430px] -translate-x-1/2 -translate-y-1/2 flex-col justify-center py-3 sm:py-5">
-            <div className="auth-brand mb-4 lg:hidden"><div className="mb-2 grid size-9 place-items-center rounded-xl bg-[#173c35] text-[#d9f073]"><Ruler /></div><p className="text-sm font-bold text-[#173c35]">Buildwise</p></div>
+            <div className="auth-brand mb-4 lg:hidden"><div className="mb-2 grid size-9 place-items-center rounded-xl bg-[#173c35] text-[#d9f073]"><Home /></div><p className="text-sm font-bold text-[#173c35]">Buildwise</p></div>
             <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-[#a08a50]">{isLogin ? 'Welcome back' : 'Get started'}</p>
             <h2 className="text-3xl font-semibold tracking-[-0.045em] text-[#173c35]">{isLogin ? 'Sign in to your workspace' : 'Create your Buildwise account'}</h2>
             <p className="auth-description mt-2 text-sm leading-6 text-[#7a8780]">{isLogin ? 'Access your estimates and keep every project moving.' : 'Start organizing project costs in one focused workspace.'}</p>

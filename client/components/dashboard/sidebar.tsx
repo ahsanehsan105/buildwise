@@ -1,6 +1,6 @@
 'use client'
 
-import { BarChart3, ClipboardList, LayoutDashboard, LogOut, Package, Ruler, Users, X } from 'lucide-react'
+import { BarChart3, ClipboardList, Home, LayoutDashboard, LogOut, Package, Users, X } from 'lucide-react'
 import type { ViewName } from './types'
 
 type SidebarProps = {
@@ -44,7 +44,7 @@ export function Sidebar({ open, view, hasSelectedProject, onNavigate, onClose, o
 function Brand() {
   return (
     <div className="mb-10 flex items-center gap-2.5 px-2">
-      <div className="grid size-9 place-items-center rounded-xl bg-[#173c35] text-[#d9f073]"><Ruler /></div>
+      <div className="grid size-9 place-items-center rounded-xl bg-[#173c35] text-[#d9f073]"><Home /></div>
       <div><p className="text-[15px] font-bold">Buildwise</p><p className="text-[10px] uppercase tracking-[.18em] text-[#8a9590]">Cost intelligence</p></div>
     </div>
   )
