@@ -54,18 +54,9 @@ export function CostView({ kind, project, rows, total, query, onQueryChange, onA
   return (
     <>
       <button onClick={onBack} className="mb-6 flex items-center gap-2 text-sm font-bold text-[#527263]"><ArrowLeft />All projects</button>
-      <PageHeading eyebrow={`${project.name} / daily ledger`} title={title} description={`${project.location} · ${project.size} ${project.unit}`}>
-        <div className="flex gap-3">
-          <button onClick={printLedger} className="flex items-center gap-2 rounded-xl border border-[#dfe4df] bg-[#fbfcfa] px-4 py-2.5 text-sm font-bold"><Printer />Print / PDF</button>
-          <button onClick={onAdd} className="flex items-center gap-2 rounded-xl bg-[#d9f073] px-4 py-2.5 text-sm font-bold text-[#173c35]"><Plus />Add today</button>
-        </div>
-      </PageHeading>
-      <div className="mb-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div className="rounded-2xl bg-[#173c35] px-5 py-3 text-white"><p className="text-xs text-[#b9c8c0]">Section total</p><p className="text-xl font-bold">{money(total)}</p></div>
-        <label className="flex items-center gap-2 rounded-xl border border-[#dfe4df] bg-[#fbfcfa] px-3 py-2 text-sm text-[#839088]"><Search /><input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Search item, category, date..." className="w-56 bg-transparent outline-none" /></label>
-      </div>
+      <PageHeading eyebrow={`${project.name} / daily ledger`} title={title} description={`${project.location} · ${project.size} ${project.unit}`} />
       {kind === 'labour' && (
-        <section className="mb-5 overflow-hidden rounded-2xl border border-[#dfe4df] bg-[#fbfcfa]">
+        <section className="mb-5 -mt-3 overflow-hidden rounded-2xl border border-[#dfe4df] bg-[#fbfcfa]">
           <div className="flex flex-col gap-3 border-b border-[#e7ebe7] bg-[#f7f9f6] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-[.14em] text-[#a08a50]">Thakadar contract</p>
@@ -84,7 +75,28 @@ export function CostView({ kind, project, rows, total, query, onQueryChange, onA
           )}
         </section>
       )}
-      <EntryTable kind={kind} rows={rows} onEdit={onEdit} onDelete={onDelete} isBusy={isBusy} />
+      <EntryTable
+        kind={kind}
+        rows={rows}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        isBusy={isBusy}
+        toolbar={(
+          <>
+            <div className="w-fit rounded-xl bg-[#173c35] px-4 py-2.5 text-white">
+              <p className="text-[11px] text-[#b9c8c0]">Section total</p>
+              <p className="text-lg font-bold leading-tight">{money(total)}</p>
+            </div>
+            <div className="flex flex-col gap-3 sm:items-end">
+              <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+                <button onClick={printLedger} className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#dfe4df] bg-[#fbfcfa] px-3 py-2.5 text-sm font-bold sm:flex-none sm:px-4"><Printer size={18} />Print / PDF</button>
+                <button onClick={onAdd} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#d9f073] px-3 py-2.5 text-sm font-bold text-[#173c35] sm:flex-none sm:px-4"><Plus size={18} />Add today</button>
+              </div>
+              <label className="flex w-full items-center gap-2 rounded-xl border border-[#dfe4df] bg-[#fbfcfa] px-3 py-2 text-sm text-[#839088] sm:w-80"><Search size={18} className="shrink-0" /><input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Search item, category, date..." className="min-w-0 flex-1 bg-transparent outline-none" /></label>
+            </div>
+          </>
+        )}
+      />
       {kind === 'labour' && isContractModalOpen && (
         <LabourContractModal
           contract={labourContract}
