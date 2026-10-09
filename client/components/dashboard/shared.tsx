@@ -40,9 +40,7 @@ export function EntryTable({ kind, rows, onEdit, onDelete, isBusy, toolbar, summ
 
   return (
     <div className="overflow-hidden rounded-2xl border border-[#dfe4df] bg-[#fbfcfa]">
-      <div className="flex flex-col gap-4 border-b border-[#e7ebe7] bg-[#f7f9f6] p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-        {toolbar}
-      </div>
+      <div className="border-b border-[#e7ebe7] bg-[#f7f9f6] p-4 sm:p-5">{toolbar}</div>
       {summary && <div className="border-b border-[#e7ebe7] px-4 py-4 sm:px-5">{summary}</div>}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] text-left text-sm">

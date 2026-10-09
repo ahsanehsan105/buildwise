@@ -79,7 +79,12 @@ export function CostView({ kind, project, rows, total, query, onQueryChange, sea
   return (
     <>
       <button onClick={onBack} className="mb-6 flex items-center gap-2 text-sm font-bold text-[#527263]"><ArrowLeft />All projects</button>
-      <PageHeading eyebrow={`${project.name} / daily ledger`} title={title} description={`${project.location} · ${project.size} ${project.unit}`} />
+      <PageHeading eyebrow={`${project.name} / daily ledger`} title={title} description={`${project.location} · ${project.size} ${project.unit}`}>
+        <div className="flex w-full items-center justify-between gap-4 rounded-xl bg-[#173c35] px-4 py-3 text-white sm:w-fit sm:min-w-44 sm:flex-col sm:items-start sm:gap-0">
+          <p className="text-xs font-medium text-[#b9c8c0]">Section total</p>
+          <p className="text-lg font-bold leading-tight">{money(total)}</p>
+        </div>
+      </PageHeading>
       {kind === 'labour' && (
         <section className="mb-5 -mt-3 overflow-hidden rounded-2xl border border-[#dfe4df] bg-[#fbfcfa]">
           <div className="flex flex-col gap-3 border-b border-[#e7ebe7] bg-[#f7f9f6] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -107,29 +112,25 @@ export function CostView({ kind, project, rows, total, query, onQueryChange, sea
         onDelete={onDelete}
         isBusy={isBusy}
         toolbar={(
-          <>
-            <div className="w-fit rounded-xl bg-[#173c35] px-4 py-2.5 text-white">
-              <p className="text-[11px] text-[#b9c8c0]">Section total</p>
-              <p className="text-lg font-bold leading-tight">{money(total)}</p>
-            </div>
-            <div className="flex flex-col gap-3 sm:items-end">
-              <div className="flex w-full flex-wrap gap-2 sm:w-auto">
-                <button onClick={printLedger} className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#dfe4df] bg-[#fbfcfa] px-3 py-2.5 text-sm font-bold sm:flex-none sm:px-4"><Printer size={18} />Print / PDF</button>
-                <button onClick={onAdd} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#d9f073] px-3 py-2.5 text-sm font-bold text-[#173c35] sm:flex-none sm:px-4"><Plus size={18} />Add today</button>
-              </div>
-              <div className="flex w-full flex-col gap-2 sm:w-[26rem] sm:flex-row">
+          <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row lg:max-w-2xl">
+              <label className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-xl border border-[#dfe4df] bg-white px-3 text-sm text-[#839088] transition focus-within:border-[#789b86] focus-within:ring-2 focus-within:ring-[#789b86]/15"><Search size={18} className="shrink-0" /><input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={searchField === 'item' ? `Search ${kind === 'labour' ? 'name' : 'item'}...` : searchField === 'category' ? 'Search category...' : searchField === 'unit' ? 'Search unit...' : searchField === 'date' ? 'Search date...' : 'Search all fields...'} className="min-w-0 w-full bg-transparent outline-none placeholder:text-[#a6b1ab]" /></label>
+              <div className="sm:w-40 sm:shrink-0">
                 <label className="sr-only" htmlFor="ledger-search-field">Search by</label>
-                <select id="ledger-search-field" value={searchField} onChange={(event) => onSearchFieldChange(event.target.value as EntrySearchField)} className="min-h-10 w-full rounded-xl border border-[#dfe4df] bg-[#fbfcfa] px-3 text-sm text-[#355047] outline-none focus:border-[#789b86] sm:w-36">
+                <select id="ledger-search-field" value={searchField} onChange={(event) => onSearchFieldChange(event.target.value as EntrySearchField)} className="min-h-11 w-full rounded-xl border border-[#dfe4df] bg-white px-3 text-sm text-[#355047] outline-none transition focus:border-[#789b86] focus:ring-2 focus:ring-[#789b86]/15 sm:w-36 sm:shrink-0">
                   <option value="all">All fields</option>
                   <option value="item">{kind === 'labour' ? 'Name' : 'Item'}</option>
                   <option value="category">Category</option>
                   {kind === 'material' && <option value="unit">Unit</option>}
                   <option value="date">Date</option>
                 </select>
-                <label className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-[#dfe4df] bg-[#fbfcfa] px-3 py-2 text-sm text-[#839088]"><Search size={18} className="shrink-0" /><input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={searchField === 'item' ? `Search ${kind === 'labour' ? 'name' : 'item'}...` : searchField === 'category' ? 'Search category...' : searchField === 'unit' ? 'Search unit...' : searchField === 'date' ? 'Search date...' : 'Search all fields...'} className="min-w-0 flex-1 bg-transparent outline-none" /></label>
               </div>
             </div>
-          </>
+            <div className="grid grid-cols-2 gap-2 lg:shrink-0">
+              <button onClick={printLedger} className="flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-[#dfe4df] bg-white px-3 text-sm font-semibold text-[#355047] transition hover:bg-[#f0f4ef] md:px-4"><Printer size={18} />Print / PDF</button>
+              <button onClick={onAdd} className="flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[#d9f073] px-3 text-sm font-bold text-[#173c35] transition hover:bg-[#cfe65f] md:px-4"><Plus size={18} />Add today</button>
+            </div>
+          </div>
         )}
         summary={query.trim() ? (
           <section aria-live="polite">
