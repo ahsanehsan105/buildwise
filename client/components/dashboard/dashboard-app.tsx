@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ApiError, apiRequest, clearToken, getToken, type CostEntry, type Project, type User } from '@/lib/api'
+import { ApiError, apiRequest, clearToken, getToken, type CostEntry, type LabourContract, type Project, type User } from '@/lib/api'
 import { useToast } from '@/components/toast-provider'
 import { CostView } from './cost-view'
 import { ConfirmDeleteDialog } from './confirm-delete-dialog'
@@ -73,7 +73,7 @@ export function DashboardApp() {
         if (requestError instanceof ApiError && requestError.status === 401) {
           clearToken()
           router.replace('/login')
-          return
+          return false
         }
         setPageError(requestError instanceof Error ? requestError.message : 'Unable to load your workspace.')
       } finally {
@@ -174,6 +174,35 @@ export function DashboardApp() {
       setMutationError(requestError instanceof ApiError && (requestError.status === 404 || requestError.status === 405)
         ? 'The configured API does not support project updates yet. Deploy the latest server changes, then try again.'
         : requestError instanceof Error ? requestError.message : 'Unable to update this project.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function saveLabourContract(contract: Pick<LabourContract, 'length' | 'width' | 'rate'>): Promise<boolean> {
+    if (!selectedProject) return false
+    setIsSaving(true)
+    setMutationError('')
+    try {
+      const result = await apiRequest<{ labourContract: LabourContract }>(`/projects/${selectedProject.id}/labour-contract`, {
+        method: 'PATCH',
+        body: JSON.stringify(contract),
+      })
+      setProjects((current) => current.map((project) => project.id === selectedProject.id
+        ? { ...project, labourContract: result.labourContract }
+        : project))
+      showToast('Thakadar contract saved.')
+      return true
+    } catch (requestError) {
+      if (requestError instanceof ApiError && requestError.status === 401) {
+        clearToken()
+        router.replace('/login')
+        return false
+      }
+      setMutationError(requestError instanceof ApiError && (requestError.status === 404 || requestError.status === 405)
+        ? 'The configured API does not support labour contracts yet. Deploy the latest server changes, then try again.'
+        : requestError instanceof Error ? requestError.message : 'Unable to save the labour contract.')
+      return false
     } finally {
       setIsSaving(false)
     }
@@ -325,6 +354,8 @@ export function DashboardApp() {
                   onEdit={(entry) => { setEntryToEdit(entry); setMutationError(''); setModal('edit-entry') }}
                   onDelete={(entry) => setPendingDelete({ type: 'entry', entry })}
                   isBusy={isSaving}
+                  onSaveLabourContract={saveLabourContract}
+                  contractError={mutationError}
                   onBack={() => navigate('projects', null)}
                 />
               )}

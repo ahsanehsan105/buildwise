@@ -17,6 +17,22 @@ function publicEntry(entry, projectId) {
   }
 }
 
+function publicLabourContract(contract) {
+  if (!contract) return null
+  const areas = contract.areas?.length
+    ? contract.areas.map((area) => ({ name: area.name, length: area.length, width: area.width }))
+    : Number(contract.length) > 0 && Number(contract.width) > 0
+      ? [{ name: 'Ground floor', length: contract.length, width: contract.width }]
+      : []
+  const totalArea = areas.reduce((sum, area) => sum + area.length * area.width, 0)
+  return {
+    areas,
+    totalArea,
+    rate: contract.rate,
+    total: totalArea * contract.rate,
+  }
+}
+
 function publicProject(project) {
   return {
     id: project._id.toString(),
@@ -25,6 +41,7 @@ function publicProject(project) {
     address: project.address,
     unit: project.unit,
     size: project.size,
+    labourContract: publicLabourContract(project.labourContract),
     status: project.status,
     entries: project.entries.map((entry) => publicEntry(entry, project._id)),
     createdAt: project.createdAt,
@@ -65,6 +82,22 @@ async function deleteProject(req, res) {
   const project = await findOwnedProject(req)
   await project.deleteOne()
   return res.json({ message: 'Project deleted.' })
+}
+
+async function updateLabourContract(req, res) {
+  const project = await findOwnedProject(req)
+  if (!Array.isArray(req.body.areas) || req.body.areas.length === 0 || req.body.areas.length > 50) {
+    throw new RequestError('Add between 1 and 50 contract areas.')
+  }
+  const areas = req.body.areas.map((area, index) => ({
+    name: requiredText(area?.name, `Area ${index + 1} name`, 80),
+    length: positiveNumber(area?.length, `Area ${index + 1} length`),
+    width: positiveNumber(area?.width, `Area ${index + 1} width`),
+  }))
+  const rate = positiveNumber(req.body.rate, 'Rate', true)
+  project.labourContract = { areas, rate }
+  await project.save()
+  return res.json({ labourContract: publicLabourContract(project.labourContract) })
 }
 
 async function findOwnedProject(req) {
@@ -143,4 +176,4 @@ async function deleteEntry(req, res) {
   return res.json({ message: 'Entry deleted.' })
 }
 
-module.exports = { listProjects, createProject, updateProject, deleteProject, listEntries, createEntry, updateEntry, deleteEntry }
+module.exports = { listProjects, createProject, updateProject, deleteProject, updateLabourContract, listEntries, createEntry, updateEntry, deleteEntry }

@@ -16,6 +16,21 @@ export type CostEntry = {
   total: number
 }
 
+export type LabourContractArea = {
+  name: string
+  length: number
+  width: number
+}
+
+export type LabourContract = {
+  areas?: LabourContractArea[]
+  totalArea?: number
+  length?: number
+  width?: number
+  rate: number
+  total: number
+}
+
 export type Project = {
   id: string
   name: string
@@ -23,6 +38,7 @@ export type Project = {
   address: string
   unit: string
   size: number
+  labourContract: LabourContract | null
   status: string
   entries: CostEntry[]
 }
