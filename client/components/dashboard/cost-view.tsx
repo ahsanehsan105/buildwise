@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ArrowLeft, Plus, Printer, Search } from 'lucide-react'
 import { printTableReport } from '@/lib/print-table-report'
 import type { LabourContract } from '@/lib/api'
 import type { Entry, Project } from './types'
-import { money, moneyRate } from './types'
+import { money, moneyRate, type EntrySearchField } from './types'
 import { EntryTable, PageHeading } from './shared'
 import { LabourContractModal } from './labour-contract-modal'
 
@@ -14,6 +14,8 @@ type CostViewProps = {
   total: number
   query: string
   onQueryChange: (query: string) => void
+  searchField: EntrySearchField
+  onSearchFieldChange: (field: EntrySearchField) => void
   onAdd: () => void
   onEdit: (entry: Entry) => void
   onDelete: (entry: Entry) => void
@@ -23,7 +25,7 @@ type CostViewProps = {
   onBack: () => void
 }
 
-export function CostView({ kind, project, rows, total, query, onQueryChange, onAdd, onEdit, onDelete, isBusy, onSaveLabourContract, contractError, onBack }: CostViewProps) {
+export function CostView({ kind, project, rows, total, query, onQueryChange, searchField, onSearchFieldChange, onAdd, onEdit, onDelete, isBusy, onSaveLabourContract, contractError, onBack }: CostViewProps) {
   const [isContractModalOpen, setIsContractModalOpen] = useState(false)
   const title = kind === 'labour' ? 'Labour cost' : 'Material cost'
   const labourContract = project.labourContract
@@ -33,6 +35,29 @@ export function CostView({ kind, project, rows, total, query, onQueryChange, onA
   const contractArea = labourContract?.totalArea
     ?? contractAreas.reduce((sum, area) => sum + area.length * area.width, 0)
   const remaining = labourContract ? labourContract.total - total : 0
+  const materialSummary = useMemo(() => {
+    const groups = new Map<string, { item: string; unit: string; quantity: number; total: number }>()
+    for (const entry of rows) {
+      const key = `${entry.item.trim().toLowerCase()}\u0000${entry.unit.trim().toLowerCase()}`
+      const group = groups.get(key) || { item: entry.item, unit: entry.unit, quantity: 0, total: 0 }
+      group.quantity += entry.quantity
+      group.total += entry.total
+      groups.set(key, group)
+    }
+    return [...groups.values()].sort((first, second) => first.item.localeCompare(second.item))
+  }, [rows])
+  const labourSummary = useMemo(() => {
+    const groups = new Map<string, { name: string; categories: Set<string>; dates: Set<string>; total: number }>()
+    for (const entry of rows) {
+      const key = entry.item.trim().toLowerCase()
+      const group = groups.get(key) || { name: entry.item, categories: new Set<string>(), dates: new Set<string>(), total: 0 }
+      group.categories.add(entry.category)
+      group.dates.add(entry.date)
+      group.total += entry.total
+      groups.set(key, group)
+    }
+    return [...groups.values()].sort((first, second) => first.name.localeCompare(second.name))
+  }, [rows])
 
   function printLedger() {
     const exportTotal = rows.reduce((sum, entry) => sum + entry.total, 0)
@@ -92,10 +117,58 @@ export function CostView({ kind, project, rows, total, query, onQueryChange, onA
                 <button onClick={printLedger} className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#dfe4df] bg-[#fbfcfa] px-3 py-2.5 text-sm font-bold sm:flex-none sm:px-4"><Printer size={18} />Print / PDF</button>
                 <button onClick={onAdd} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#d9f073] px-3 py-2.5 text-sm font-bold text-[#173c35] sm:flex-none sm:px-4"><Plus size={18} />Add today</button>
               </div>
-              <label className="flex w-full items-center gap-2 rounded-xl border border-[#dfe4df] bg-[#fbfcfa] px-3 py-2 text-sm text-[#839088] sm:w-80"><Search size={18} className="shrink-0" /><input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Search item, category, date..." className="min-w-0 flex-1 bg-transparent outline-none" /></label>
+              <div className="flex w-full flex-col gap-2 sm:w-[26rem] sm:flex-row">
+                <label className="sr-only" htmlFor="ledger-search-field">Search by</label>
+                <select id="ledger-search-field" value={searchField} onChange={(event) => onSearchFieldChange(event.target.value as EntrySearchField)} className="min-h-10 w-full rounded-xl border border-[#dfe4df] bg-[#fbfcfa] px-3 text-sm text-[#355047] outline-none focus:border-[#789b86] sm:w-36">
+                  <option value="all">All fields</option>
+                  <option value="item">{kind === 'labour' ? 'Name' : 'Item'}</option>
+                  <option value="category">Category</option>
+                  {kind === 'material' && <option value="unit">Unit</option>}
+                  <option value="date">Date</option>
+                </select>
+                <label className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-[#dfe4df] bg-[#fbfcfa] px-3 py-2 text-sm text-[#839088]"><Search size={18} className="shrink-0" /><input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={searchField === 'item' ? `Search ${kind === 'labour' ? 'name' : 'item'}...` : searchField === 'category' ? 'Search category...' : searchField === 'unit' ? 'Search unit...' : searchField === 'date' ? 'Search date...' : 'Search all fields...'} className="min-w-0 flex-1 bg-transparent outline-none" /></label>
+              </div>
             </div>
           </>
         )}
+        summary={query.trim() ? (
+          <section aria-live="polite">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-sm font-bold text-[#173c35]">{kind === 'material' ? 'Material totals for matching entries' : 'Labour summary for matching entries'}</h2>
+              <p className="text-xs text-[#718078]">{rows.length} matching {rows.length === 1 ? 'entry' : 'entries'} · {money(rows.reduce((sum, entry) => sum + entry.total, 0))} total</p>
+            </div>
+            {kind === 'material' ? (
+              materialSummary.length ? (
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                  {materialSummary.map((group) => (
+                    <div key={`${group.item}-${group.unit}`} className="rounded-xl border border-[#e7ebe7] bg-[#fbfcfa] px-4 py-3">
+                      <p className="truncate text-sm font-semibold text-[#355047]">{group.item}</p>
+                      <div className="mt-2 flex items-end justify-between gap-3">
+                        <p className="text-xs text-[#718078]">Quantity <span className="font-semibold text-[#355047]">{group.quantity.toLocaleString()} {group.unit}</span></p>
+                        <p className="text-sm font-bold text-[#173c35]">{money(group.total)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="text-sm text-[#718078]">No matching material records.</p>
+            ) : (
+              labourSummary.length ? (
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                  {labourSummary.map((group) => (
+                    <div key={group.name.toLowerCase()} className="rounded-xl border border-[#e7ebe7] bg-[#fbfcfa] px-4 py-3">
+                      <p className="truncate text-sm font-semibold text-[#355047]">{group.name}</p>
+                      <p className="mt-1 truncate text-xs text-[#718078]">{[...group.categories].join(', ')}</p>
+                      <div className="mt-2 flex items-end justify-between gap-3">
+                        <p className="text-xs text-[#718078]">Worked <span className="font-semibold text-[#355047]">{group.dates.size} {group.dates.size === 1 ? 'day' : 'days'}</span></p>
+                        <p className="text-sm font-bold text-[#173c35]">{money(group.total)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="text-sm text-[#718078]">No matching labour records.</p>
+            )}
+          </section>
+        ) : undefined}
       />
       {kind === 'labour' && isContractModalOpen && (
         <LabourContractModal

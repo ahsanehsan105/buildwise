@@ -13,7 +13,7 @@ import { ProjectModal } from './project-modal'
 import { ProjectsView } from './projects-view'
 import { ReportsView } from './reports-view'
 import { Sidebar } from './sidebar'
-import type { Entry, ViewName } from './types'
+import type { Entry, EntrySearchField, ViewName } from './types'
 
 function readDashboardLocation(projects: Project[]) {
   const params = new URLSearchParams(window.location.search)
@@ -36,6 +36,7 @@ export function DashboardApp() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [query, setQuery] = useState('')
+  const [searchField, setSearchField] = useState<EntrySearchField>('all')
   const [modal, setModal] = useState<'project' | 'labour' | 'material' | 'edit-entry' | null>(null)
   const [projectToEdit, setProjectToEdit] = useState<Project | null>(null)
   const [entryToEdit, setEntryToEdit] = useState<Entry | null>(null)
@@ -93,6 +94,7 @@ export function DashboardApp() {
       setView(location.view)
       setSelectedProjectId(location.projectId)
       setQuery('')
+      setSearchField('all')
       setMutationError('')
     }
 
@@ -109,9 +111,16 @@ export function DashboardApp() {
     const search = query.trim().toLowerCase()
     return selectedProject.entries
       .filter((entry) => entry.type === view)
-      .filter((entry) => `${entry.item} ${entry.category} ${entry.date}`.toLowerCase().includes(search))
+      .filter((entry) => {
+        if (!search) return true
+        if (searchField === 'item') return entry.item.toLowerCase().includes(search)
+        if (searchField === 'category') return entry.category.toLowerCase().includes(search)
+        if (searchField === 'unit') return entry.unit.toLowerCase().includes(search)
+        if (searchField === 'date') return entry.date.toLowerCase().includes(search)
+        return `${entry.item} ${entry.category} ${entry.unit} ${entry.date}`.toLowerCase().includes(search)
+      })
       .sort((first, second) => second.date.localeCompare(first.date))
-  }, [query, selectedProject, view])
+  }, [query, searchField, selectedProject, view])
   const selectedTotal = (selectedProject?.entries || [])
     .filter((entry) => entry.type === view)
     .reduce((total, entry) => total + entry.total, 0)
@@ -121,6 +130,7 @@ export function DashboardApp() {
     setSelectedProjectId(projectId)
     setSidebarOpen(false)
     setQuery('')
+    setSearchField('all')
     setMutationError('')
     const params = new URLSearchParams()
     if (nextView !== 'dashboard') params.set('view', nextView)
@@ -350,6 +360,8 @@ export function DashboardApp() {
                   total={selectedTotal}
                   query={query}
                   onQueryChange={setQuery}
+                  searchField={searchField}
+                  onSearchFieldChange={setSearchField}
                   onAdd={() => { setMutationError(''); setModal(view) }}
                   onEdit={(entry) => { setEntryToEdit(entry); setMutationError(''); setModal('edit-entry') }}
                   onDelete={(entry) => setPendingDelete({ type: 'entry', entry })}

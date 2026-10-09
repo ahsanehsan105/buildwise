@@ -2,6 +2,7 @@ import type { CostEntry, Project as ApiProject } from '@/lib/api'
 
 export type Project = ApiProject
 export type Entry = CostEntry
+export type EntrySearchField = 'all' | 'item' | 'category' | 'unit' | 'date'
 
 export type ViewName = 'dashboard' | 'projects' | 'reports' | 'labour' | 'material'
 

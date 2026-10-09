@@ -23,7 +23,7 @@ export function StatCard({ icon: Icon, label, value }: { icon: LucideIcon; label
   )
 }
 
-export function EntryTable({ kind, rows, onEdit, onDelete, isBusy, toolbar }: { kind: 'labour' | 'material'; rows: Entry[]; onEdit: (entry: Entry) => void; onDelete: (entry: Entry) => void; isBusy: boolean; toolbar: ReactNode }) {
+export function EntryTable({ kind, rows, onEdit, onDelete, isBusy, toolbar, summary }: { kind: 'labour' | 'material'; rows: Entry[]; onEdit: (entry: Entry) => void; onDelete: (entry: Entry) => void; isBusy: boolean; toolbar: ReactNode; summary?: ReactNode }) {
   const pageSize = 10
   const [page, setPage] = useState(0)
   const pageCount = Math.ceil(rows.length / pageSize)
@@ -43,6 +43,7 @@ export function EntryTable({ kind, rows, onEdit, onDelete, isBusy, toolbar }: { 
       <div className="flex flex-col gap-4 border-b border-[#e7ebe7] bg-[#f7f9f6] p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
         {toolbar}
       </div>
+      {summary && <div className="border-b border-[#e7ebe7] px-4 py-4 sm:px-5">{summary}</div>}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead className="bg-[#f0f4ef] text-xs uppercase tracking-wider text-[#789087]"><tr><th className="px-5 py-4">Date</th><th className="px-5 py-4">{kind === 'labour' ? 'Name' : 'Item'}</th><th className="px-5 py-4">Category</th>{kind === 'material' && <th className="px-5 py-4">Quantity</th>}<th className="px-5 py-4">{kind === 'labour' ? 'Price (PKR)' : 'Rate (PKR)'}</th><th className="px-5 py-4 text-right">Total (PKR)</th><th className="px-5 py-4 text-right">Actions</th></tr></thead>
