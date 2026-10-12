@@ -30,6 +30,14 @@ function existingAreas(contract: LabourContract | null): ContractAreaForm[] {
   return [{ name: 'Ground floor', length: '', width: '' }]
 }
 
+function getSectionArea(area: ContractAreaForm): number | null {
+  if (!area.length.trim() || !area.width.trim()) return null
+  const length = Number(area.length)
+  const width = Number(area.width)
+  if (!Number.isFinite(length) || !Number.isFinite(width) || length <= 0 || width <= 0) return null
+  return length * width
+}
+
 export function LabourContractModal({ contract, onClose, onSave, isSaving, error }: LabourContractModalProps) {
   const [areas, setAreas] = useState<ContractAreaForm[]>(() => existingAreas(contract))
   const [rateValue, setRateValue] = useState(contract ? String(contract.rate) : '')
@@ -61,23 +69,32 @@ export function LabourContractModal({ contract, onClose, onSave, isSaving, error
     >
       <p className="text-sm leading-5 text-[#718078]">Add each floor or extra area separately. All areas use the same agreed rate per square foot.</p>
       <div className="labour-contract-areas mt-3 flex flex-col gap-3">
-        {areas.map((area, index) => (
-          <section key={index} className="rounded-xl border border-[#e1e8e1] bg-[#f7f9f6] p-3">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <p className="text-xs font-bold uppercase tracking-wide text-[#718078]">Area {index + 1}</p>
-              {areas.length > 1 && (
-                <button type="button" onClick={() => setAreas((current) => current.filter((_, areaIndex) => areaIndex !== index))} aria-label={`Remove area ${index + 1}`} className="grid size-8 place-items-center rounded-lg text-red-700 transition hover:bg-red-50">
-                  <Trash2 size={15} />
-                </button>
+        {areas.map((area, index) => {
+          const sectionArea = getSectionArea(area)
+          return (
+            <section key={index} className="rounded-xl border border-[#e1e8e1] bg-[#f7f9f6] p-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="text-xs font-bold uppercase tracking-wide text-[#718078]">Area {index + 1}</p>
+                {areas.length > 1 && (
+                  <button type="button" onClick={() => setAreas((current) => current.filter((_, areaIndex) => areaIndex !== index))} aria-label={`Remove area ${index + 1}`} className="grid size-8 place-items-center rounded-lg text-red-700 transition hover:bg-red-50">
+                    <Trash2 size={15} />
+                  </button>
+                )}
+              </div>
+              <Field label="Floor / area name"><input maxLength={80} placeholder="e.g. Ground floor, Mumty, Shade" value={area.name} onChange={(event) => updateArea(index, 'name', event.target.value)} /></Field>
+              <div className="mt-2 grid grid-cols-2 gap-3">
+                <Field label="Length (ft)"><input type="number" min="0.01" step="any" placeholder="e.g. 54" value={area.length} onChange={(event) => updateArea(index, 'length', event.target.value)} /></Field>
+                <Field label="Width (ft)"><input type="number" min="0.01" step="any" placeholder="e.g. 20" value={area.width} onChange={(event) => updateArea(index, 'width', event.target.value)} /></Field>
+              </div>
+              {sectionArea !== null && (
+                <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-[#e1e8e1] bg-white px-3 py-2">
+                  <p className="text-xs font-medium text-[#718078]">Section area</p>
+                  <p className="text-sm font-bold text-[#173c35]">{sectionArea.toLocaleString(undefined, { maximumFractionDigits: 2 })} sq ft</p>
+                </div>
               )}
-            </div>
-            <Field label="Floor / area name"><input maxLength={80} placeholder="e.g. Ground floor, Mumty, Shade" value={area.name} onChange={(event) => updateArea(index, 'name', event.target.value)} /></Field>
-            <div className="mt-2 grid grid-cols-2 gap-3">
-              <Field label="Length (ft)"><input type="number" min="0.01" step="any" placeholder="e.g. 54" value={area.length} onChange={(event) => updateArea(index, 'length', event.target.value)} /></Field>
-              <Field label="Width (ft)"><input type="number" min="0.01" step="any" placeholder="e.g. 20" value={area.width} onChange={(event) => updateArea(index, 'width', event.target.value)} /></Field>
-            </div>
-          </section>
-        ))}
+            </section>
+          )
+        })}
         <button type="button" onClick={() => setAreas((current) => [...current, { name: '', length: '', width: '' }])} className="inline-flex w-fit items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-semibold text-[#386151] transition hover:bg-[#e7f0df]">
           <Plus size={16} />Add another floor or area
         </button>
